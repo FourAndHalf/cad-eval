@@ -1,10 +1,11 @@
 """Prompt templates and model config for the reference LLM agent.
 
 Model id is a swappable constant on purpose -- confirm the current id
-against Anthropic's docs before relying on it; model id strings go stale.
+against Google's Gemini API docs before relying on it; model id strings
+go stale.
 """
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "gemini-3.8-flash"
 MAX_TOKENS = 8192
 
 SYSTEM_PROMPT = """\
