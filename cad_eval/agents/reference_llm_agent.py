@@ -1,4 +1,4 @@
-"""Reference agent: prompts Claude for CadQuery code, executes it in a
+"""Reference agent: prompts Gemini for CadQuery code, executes it in a
 sandboxed subprocess, exports STEP. Demonstrates the harness end-to-end and
 is deliberately swappable -- any agent that can produce a STEP file from a
 spec string fits the same `Agent` protocol.
@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import anthropic
+from google import genai
+from google.genai import types
 
 from cad_eval.agents.base import AgentResult
 from cad_eval.agents.prompts import DEFAULT_MODEL, MAX_TOKENS, SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
@@ -29,16 +30,18 @@ class ReferenceLLMAgent:
 
     def __init__(self, model_id: str = DEFAULT_MODEL):
         self.model_id = model_id
-        self._client = anthropic.Anthropic()
+        self._client = genai.Client()  # resolves GOOGLE_API_KEY / GEMINI_API_KEY from the environment
 
     def _generate_code(self, spec_text: str) -> tuple[str | None, str]:
-        message = self._client.messages.create(
+        response = self._client.models.generate_content(
             model=self.model_id,
-            max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": USER_PROMPT_TEMPLATE.format(spec_text=spec_text)}],
+            contents=USER_PROMPT_TEMPLATE.format(spec_text=spec_text),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                max_output_tokens=MAX_TOKENS,
+            ),
         )
-        text = "".join(block.text for block in message.content if block.type == "text")
+        text = response.text or ""
         match = _CODE_BLOCK_RE.search(text)
         if not match:
             return None, text

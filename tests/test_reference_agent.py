@@ -1,24 +1,21 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from cad_eval.agents.reference_llm_agent import ReferenceLLMAgent
 from cad_eval.agents.sandbox import run_python_script
 
 
-def _mock_message(text: str):
-    block = MagicMock()
-    block.type = "text"
-    block.text = text
-    message = MagicMock()
-    message.content = [block]
-    return message
+def _mock_response(text: str):
+    response = MagicMock()
+    response.text = text
+    return response
 
 
 def test_code_parse_error_when_no_fenced_block(tmp_path):
     agent = ReferenceLLMAgent.__new__(ReferenceLLMAgent)  # skip __init__ (no client needed)
-    agent.model_id = "claude-opus-5"
+    agent.model_id = "gemini-3.8-flash"
     agent._client = MagicMock()
-    agent._client.messages.create.return_value = _mock_message("sorry, I can't do that")
+    agent._client.models.generate_content.return_value = _mock_response("sorry, I can't do that")
 
     result = agent.run("build a box", tmp_path)
     assert result.status == "code_parse_error"
@@ -26,9 +23,9 @@ def test_code_parse_error_when_no_fenced_block(tmp_path):
 
 def test_llm_error_on_api_exception(tmp_path):
     agent = ReferenceLLMAgent.__new__(ReferenceLLMAgent)
-    agent.model_id = "claude-opus-5"
+    agent.model_id = "gemini-3.8-flash"
     agent._client = MagicMock()
-    agent._client.messages.create.side_effect = RuntimeError("connection refused")
+    agent._client.models.generate_content.side_effect = RuntimeError("connection refused")
 
     result = agent.run("build a box", tmp_path)
     assert result.status == "llm_error"
@@ -37,9 +34,9 @@ def test_llm_error_on_api_exception(tmp_path):
 
 def test_execution_error_on_broken_generated_code(tmp_path):
     agent = ReferenceLLMAgent.__new__(ReferenceLLMAgent)
-    agent.model_id = "claude-opus-5"
+    agent.model_id = "gemini-3.8-flash"
     agent._client = MagicMock()
-    agent._client.messages.create.return_value = _mock_message(
+    agent._client.models.generate_content.return_value = _mock_response(
         "```python\nraise RuntimeError('boom')\n```"
     )
 
@@ -50,9 +47,9 @@ def test_execution_error_on_broken_generated_code(tmp_path):
 
 def test_ok_status_and_step_export_on_valid_code(tmp_path):
     agent = ReferenceLLMAgent.__new__(ReferenceLLMAgent)
-    agent.model_id = "claude-opus-5"
+    agent.model_id = "gemini-3.8-flash"
     agent._client = MagicMock()
-    agent._client.messages.create.return_value = _mock_message(
+    agent._client.models.generate_content.return_value = _mock_response(
         "```python\nimport cadquery as cq\nresult = cq.Workplane('XY').box(10, 10, 5)\n```"
     )
 

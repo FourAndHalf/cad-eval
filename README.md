@@ -36,7 +36,7 @@ platform (e.g. musl/Alpine), fall back to:
 To run the reference LLM agent, set an API key:
 
 ```bash
-cp .env.example .env   # then edit .env, or export ANTHROPIC_API_KEY directly
+cp .env.example .env   # then edit .env, or export GEMINI_API_KEY directly
 ```
 
 ## Quickstart
@@ -51,7 +51,7 @@ cad-eval check --task tasks/l_bracket_v1.yaml --step tests/fixtures/valid_l_brac
 # without running an agent.
 cad-eval perturb --task tasks/l_bracket_v1.yaml
 
-# Run the reference agent (needs ANTHROPIC_API_KEY) against every task,
+# Run the reference agent (needs GEMINI_API_KEY) against every task,
 # base spec + every declared perturbation, and write a report.
 cad-eval run --all
 # -> runs/<timestamp>/results.json, runs/<timestamp>/report.html
@@ -67,7 +67,7 @@ cad-eval report diff runs/<run_a>/results.json runs/<run_b>/results.json
 cad_eval/
   task/       task YAML schema, loader, Jinja2 resolver, perturbation engine
   checker/    STEP-based assertion checkers (topology, geometry, holes, wall thickness, keyway)
-  agents/     the Agent protocol + a reference Claude-backed CadQuery agent, sandboxed
+  agents/     the Agent protocol + a reference Gemini-backed CadQuery agent, sandboxed
   report/     result models, JSON + HTML report writer, run-to-run diff
   pipeline.py orchestrates task -> agent -> STEP -> checker -> report
   cli.py
@@ -106,12 +106,12 @@ the original 30-50 target is straightforward from here.
   this against untrusted agents at scale.
 - **`keyway_slot` only handles a simple 3-face pocket** (flat floor + 2
   flat side walls), not a rounded-end endmill slot.
-- **No live end-to-end run against the real Anthropic API happened in
-  this environment** (no API key available at build time). The agent's
-  code-generation, sandboxing, and STEP-export path are covered by unit
-  tests that mock the LLM call and by a hand-written stand-in response
-  that runs for real through the sandbox; the actual model call is
-  standard SDK usage and worth a live smoke test once a key is available.
+- **No live end-to-end run against the real Gemini API happened in this
+  environment** as of the last check-in. The agent's code-generation,
+  sandboxing, and STEP-export path are covered by unit tests that mock
+  the LLM call and by a hand-written stand-in response that runs for
+  real through the sandbox; the actual model call is standard `google-genai`
+  SDK usage and worth a live smoke test with `GEMINI_API_KEY` set.
 
 ## Why this design (context for reviewers)
 
