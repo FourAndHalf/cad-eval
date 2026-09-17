@@ -63,8 +63,9 @@ def resolve_task(task: TaskSpec, variables: dict | None = None) -> ResolvedTask:
     resolved_assertions = []
     for a in task.assertions:
         params = _resolve_value(a.params, context)
+        description = _env.from_string(a.description).render(**context) if a.description else ""
         resolved_assertions.append(
-            ResolvedAssertion(id=a.id, type=a.type, description=a.description, params=params)
+            ResolvedAssertion(id=a.id, type=a.type, description=description, params=params)
         )
 
     return ResolvedTask(
