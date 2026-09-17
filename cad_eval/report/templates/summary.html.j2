@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cad-eval report: {{ run.run_id }}</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; color: #1a1a1a; background: #fafafa; }
+  h1 { font-size: 1.4rem; }
+  .meta { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .stat { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.5rem; min-width: 160px; }
+  .stat .value { font-size: 1.8rem; font-weight: 600; }
+  .stat .label { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 0.03em; }
+  .headline { border-color: #8a5cf6; background: #f5f0ff; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid #e0e0e0; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.9rem; }
+  th { background: #f0f0f0; }
+  tr.pass { background: #f2fbf3; }
+  tr.fail, tr.agent_failure { background: #fdf2f2; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.25rem; }
+  .badge.dimensional { background: #fde68a; }
+  .badge.topological { background: #fca5a5; }
+  .badge.intent_regeneration { background: #c4b5fd; }
+  .badge.agent_failure { background: #d1d5db; }
+  .status-pass { color: #16a34a; font-weight: 600; }
+  .status-fail, .status-agent_failure { color: #dc2626; font-weight: 600; }
+  .assertions { font-size: 0.8rem; color: #555; }
+</style>
+</head>
+<body>
+  <h1>cad-eval report</h1>
+  <div class="meta">
+    run <code>{{ run.run_id }}</code> &middot; agent <code>{{ run.agent_name }}</code>{% if run.model_id %} &middot; model <code>{{ run.model_id }}</code>{% endif %} &middot; {{ run.timestamp }}
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="value">{{ "%.0f"|format(summary.overall_pass_rate) if summary.overall_pass_rate is not none else "-" }}%</div><div class="label">overall pass rate</div></div>
+    <div class="stat"><div class="value">{{ "%.0f"|format(summary.base_pass_rate) if summary.base_pass_rate is not none else "-" }}%</div><div class="label">base task pass rate ({{ summary.base_count }})</div></div>
+    <div class="stat headline"><div class="value">{{ "%.0f"|format(summary.perturbation_pass_rate) if summary.perturbation_pass_rate is not none else "-" }}%</div><div class="label">perturbation pass rate ({{ summary.perturbation_count }})</div></div>
+    <div class="stat headline"><div class="value">{{ summary.intent_regeneration_failures }}</div><div class="label">intent-regeneration failures</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>task</th><th>variant</th><th>status</th><th>failure categories</th><th>assertions</th></tr>
+    </thead>
+    <tbody>
+      {% for t in run.tasks %}
+      <tr class="{{ t.overall_status }}">
+        <td>{{ t.task_id }}</td>
+        <td>{% if t.variant == "base" %}base{% else %}{{ t.delta_description }}{% endif %}</td>
+        <td class="status-{{ t.overall_status }}">{{ t.overall_status }}{% if t.agent_status != "ok" %} ({{ t.agent_status }}){% endif %}</td>
+        <td>{% for c in t.failure_categories %}<span class="badge {{ c }}">{{ c }}</span>{% endfor %}</td>
+        <td class="assertions">
+          {% for a in t.assertions %}{{ a.id }}: {{ a.status }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
