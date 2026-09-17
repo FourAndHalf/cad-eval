@@ -82,6 +82,36 @@ def bolt_circle_flange():
     cq.exporters.export(wp, str(FIXTURES / "bolt_circle_flange_valid.step"))
 
 
+def shaft_keyway():
+    """Matches tasks/shaft_keyway_v1.yaml defaults exactly."""
+    shaft_diameter, shaft_length = 20.0, 100.0
+    key_width, key_depth, key_length, key_start = 6.0, 3.0, 30.0, 10.0
+    R = shaft_diameter / 2
+
+    shaft = cq.Workplane("XY").circle(R).extrude(shaft_length)
+    cutter = (
+        cq.Workplane("XY")
+        .box(key_width, 100, key_length, centered=(True, True, True))
+        .translate((0, R - key_depth + 50, key_start + key_length / 2))
+    )
+    result = shaft.cut(cutter)
+    cq.exporters.export(result, str(FIXTURES / "shaft_keyway_valid.step"))
+
+
+def shaft_keyway_wrong_width():
+    shaft_diameter, shaft_length = 20.0, 100.0
+    key_width, key_depth, key_length, key_start = 9.0, 3.0, 30.0, 10.0  # width 9 instead of expected 6
+    R = shaft_diameter / 2
+    shaft = cq.Workplane("XY").circle(R).extrude(shaft_length)
+    cutter = (
+        cq.Workplane("XY")
+        .box(key_width, 100, key_length, centered=(True, True, True))
+        .translate((0, R - key_depth + 50, key_start + key_length / 2))
+    )
+    result = shaft.cut(cutter)
+    cq.exporters.export(result, str(FIXTURES / "shaft_keyway_wrong_width.step"))
+
+
 def wrong_hole_count_flange():
     outer_diameter, thickness, bore_diameter = 100.0, 8.0, 30.0
     hole_count, hole_diameter, pcd = 6, 6.4, 50.0  # 6 instead of expected 4
@@ -108,4 +138,6 @@ if __name__ == "__main__":
     healthy_wall_box()
     bolt_circle_flange()
     wrong_hole_count_flange()
+    shaft_keyway()
+    shaft_keyway_wrong_width()
     print("fixtures written to", FIXTURES)
