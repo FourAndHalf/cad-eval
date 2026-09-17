@@ -1,0 +1,70 @@
+task_id: enclosure_lid_v1
+title: "Rectangular enclosure lid with corner mounting holes"
+description_template: >
+  Design a flat rectangular enclosure lid, {{ length }}mm long,
+  {{ width }}mm wide, {{ thickness }}mm thick. Add {{ hole_count }}
+  through-holes of diameter {{ hole_diameter }}mm +/-{{ hole_diameter_tol }}mm,
+  near the corners/edges, {{ hole_edge_margin }}mm from each edge.
+  Export as a single manifold solid STEP file. Units: millimeters.
+
+variables:
+  length:            { type: float, default: 120.0, unit: mm }
+  width:             { type: float, default: 80.0, unit: mm }
+  thickness:         { type: float, default: 4.0, unit: mm }
+  hole_count:        { type: int, default: 4 }
+  hole_diameter:     { type: float, default: 4.5, unit: mm }
+  hole_diameter_tol: { type: float, default: 0.1, unit: mm }
+  hole_edge_margin:  { type: float, default: 8.0, unit: mm }
+
+assertions:
+  - id: is_manifold_solid
+    type: manifold_solid
+    description: "Exactly one closed, manifold, watertight solid body"
+    params:
+      min_solid_count: 1
+      max_solid_count: 1
+
+  - id: hole_pattern
+    type: hole_pattern
+    description: "{{ hole_count }} corner through-holes of correct diameter"
+    params:
+      expected_count: "{{ hole_count }}"
+      diameter_nominal: "{{ hole_diameter }}"
+      diameter_tol: "{{ hole_diameter_tol }}"
+      through: true
+
+  - id: bbox_overall
+    type: bounding_box
+    description: "Overall envelope matches lid length/width/thickness"
+    params:
+      expected:
+        x: "{{ length }}"
+        y: "{{ width }}"
+        z: "{{ thickness }}"
+      tolerance: 0.3
+
+  - id: min_wall
+    type: min_wall_thickness
+    description: "No wall thinner than 80% of nominal thickness"
+    params:
+      min_thickness: "{{ thickness * 0.8 }}"
+      sample_count: 2000
+
+  - id: volume_check
+    type: volume
+    description: "Solid volume within 1% of analytically expected volume"
+    params:
+      expected: "{{ length * width * thickness - hole_count * 3.14159265 * (hole_diameter / 2) ** 2 * thickness }}"
+      tolerance_pct: 1.0
+
+parametric:
+  perturbable:
+    - variable: hole_count
+      deltas:
+        - { op: set, value: 6 }
+    - variable: length
+      deltas:
+        - { op: scale, factor: 1.2 }
+    - variable: thickness
+      deltas:
+        - { op: scale, factor: 0.5 }

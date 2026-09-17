@@ -1,0 +1,65 @@
+task_id: bushing_spacer_v1
+title: "Cylindrical bushing/spacer with a through-bore"
+description_template: >
+  Design a cylindrical spacer/bushing, outer diameter {{ outer_diameter }}mm,
+  with a central through-bore of diameter {{ bore_diameter }}mm, overall
+  length {{ length }}mm. Export as a single manifold solid STEP file.
+  Units: millimeters.
+
+variables:
+  outer_diameter: { type: float, default: 16.0, unit: mm }
+  bore_diameter:  { type: float, default: 8.0, unit: mm }
+  length:         { type: float, default: 25.0, unit: mm }
+
+assertions:
+  - id: is_manifold_solid
+    type: manifold_solid
+    description: "Exactly one closed, manifold, watertight solid body"
+    params:
+      min_solid_count: 1
+      max_solid_count: 1
+
+  - id: bore
+    type: hole_pattern
+    description: "Central through-bore"
+    params:
+      expected_count: 1
+      diameter_nominal: "{{ bore_diameter }}"
+      diameter_tol: 0.1
+      through: true
+
+  - id: bbox_overall
+    type: bounding_box
+    description: "Overall envelope matches outer diameter and length"
+    params:
+      expected:
+        x: "{{ outer_diameter }}"
+        y: "{{ outer_diameter }}"
+        z: "{{ length }}"
+      tolerance: 0.3
+
+  - id: min_wall
+    type: min_wall_thickness
+    description: "Wall (outer to bore) at least 90% of nominal (OD-bore)/2"
+    params:
+      min_thickness: "{{ (outer_diameter - bore_diameter) / 2 * 0.9 }}"
+      sample_count: 2000
+
+  - id: volume_check
+    type: volume
+    description: "Solid volume within 1% of analytically expected volume"
+    params:
+      expected: "{{ 3.14159265 * ((outer_diameter / 2) ** 2 - (bore_diameter / 2) ** 2) * length }}"
+      tolerance_pct: 1.0
+
+parametric:
+  perturbable:
+    - variable: bore_diameter
+      deltas:
+        - { op: scale, factor: 1.5 }
+    - variable: length
+      deltas:
+        - { op: scale, factor: 2.0 }
+    - variable: outer_diameter
+      deltas:
+        - { op: add, value: -2.0 }

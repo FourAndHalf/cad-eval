@@ -82,6 +82,35 @@ def bolt_circle_flange():
     cq.exporters.export(wp, str(FIXTURES / "bolt_circle_flange_valid.step"))
 
 
+def enclosure_lid():
+    """Matches tasks/enclosure_lid_v1.yaml defaults exactly."""
+    length, width, thickness = 120.0, 80.0, 4.0
+    hole_diameter, hole_edge_margin = 4.5, 8.0
+    half_l, half_w = length / 2 - hole_edge_margin, width / 2 - hole_edge_margin
+    wp = (
+        cq.Workplane("XY")
+        .box(length, width, thickness)
+        .faces(">Z")
+        .workplane()
+        .pushPoints([(half_l, half_w), (-half_l, half_w), (half_l, -half_w), (-half_l, -half_w)])
+        .hole(hole_diameter)
+    )
+    cq.exporters.export(wp, str(FIXTURES / "enclosure_lid_valid.step"))
+
+
+def bushing_spacer():
+    """Matches tasks/bushing_spacer_v1.yaml defaults exactly: a hollow
+    cylindrical spacer with a central through-bore."""
+    outer_diameter, bore_diameter, length = 16.0, 8.0, 25.0
+    wp = (
+        cq.Workplane("XY")
+        .circle(outer_diameter / 2)
+        .circle(bore_diameter / 2)
+        .extrude(length)
+    )
+    cq.exporters.export(wp, str(FIXTURES / "bushing_spacer_valid.step"))
+
+
 def shaft_keyway():
     """Matches tasks/shaft_keyway_v1.yaml defaults exactly."""
     shaft_diameter, shaft_length = 20.0, 100.0
@@ -140,4 +169,6 @@ if __name__ == "__main__":
     wrong_hole_count_flange()
     shaft_keyway()
     shaft_keyway_wrong_width()
+    enclosure_lid()
+    bushing_spacer()
     print("fixtures written to", FIXTURES)
