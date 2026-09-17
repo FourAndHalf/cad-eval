@@ -1,0 +1,29 @@
+[project]
+name = "cad-eval"
+version = "0.1.0"
+description = "Design-intent eval harness for CAD agents"
+requires-python = ">=3.11"
+dependencies = [
+    "cadquery>=2.8.0",
+    "pydantic>=2.6",
+    "jinja2>=3.1",
+    "PyYAML>=6.0",
+    "click>=8.1",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+cad-eval = "cad_eval.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cad_eval*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

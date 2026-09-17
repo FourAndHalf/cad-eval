@@ -1,0 +1,76 @@
+task_id: l_bracket_v1
+title: "L-Bracket with mounting holes"
+description_template: >
+  Design an L-shaped mounting bracket in mild steel. The bracket has a
+  vertical leg {{ vertical_length }}mm tall and a horizontal leg
+  {{ horizontal_length }}mm long, both {{ leg_width }}mm wide, with
+  material thickness {{ thickness }}mm. The vertical leg has
+  {{ hole_count }} through-holes of diameter {{ hole_diameter }}mm
+  +/-{{ hole_diameter_tol }}mm, evenly spaced along its centerline,
+  {{ hole_edge_margin }}mm from each edge. Export a single manifold
+  solid as STEP (AP214). Units: millimeters.
+
+variables:
+  vertical_length:   { type: float, default: 80.0, unit: mm }
+  horizontal_length: { type: float, default: 60.0, unit: mm }
+  leg_width:         { type: float, default: 40.0, unit: mm }
+  thickness:         { type: float, default: 5.0, unit: mm }
+  hole_count:        { type: int, default: 2 }
+  hole_diameter:     { type: float, default: 6.5, unit: mm }
+  hole_diameter_tol: { type: float, default: 0.1, unit: mm }
+  hole_edge_margin:  { type: float, default: 15.0, unit: mm }
+
+assertions:
+  - id: is_manifold_solid
+    type: manifold_solid
+    description: "Exactly one closed, manifold, watertight solid body"
+    params:
+      min_solid_count: 1
+      max_solid_count: 1
+
+  - id: hole_pattern
+    type: hole_pattern
+    description: "{{ hole_count }} through-holes of correct diameter"
+    params:
+      expected_count: "{{ hole_count }}"
+      diameter_nominal: "{{ hole_diameter }}"
+      diameter_tol: "{{ hole_diameter_tol }}"
+      through: true
+
+  - id: bbox_overall
+    type: bounding_box
+    description: "Overall envelope matches leg lengths within tolerance"
+    params:
+      expected:
+        x: "{{ horizontal_length }}"
+        y: "{{ vertical_length }}"
+        z: "{{ thickness }}"
+      tolerance: 0.5
+
+  - id: min_wall
+    type: min_wall_thickness
+    description: "No wall thinner than material thickness minus margin"
+    params:
+      min_thickness: "{{ thickness * 0.9 }}"
+      sample_count: 2000
+
+  - id: volume_check
+    type: volume
+    description: "Solid volume within 1% of analytically expected volume"
+    params:
+      expected: "{{ (vertical_length * leg_width + horizontal_length * leg_width - leg_width * leg_width) * thickness - hole_count * 3.14159265 * (hole_diameter / 2) ** 2 * thickness }}"
+      tolerance_pct: 1.0
+
+parametric:
+  perturbable:
+    - variable: hole_count
+      deltas:
+        - { op: set, value: 4 }
+        - { op: set, value: 1 }
+    - variable: vertical_length
+      deltas:
+        - { op: scale, factor: 1.25 }
+        - { op: scale, factor: 0.75 }
+    - variable: hole_diameter
+      deltas:
+        - { op: add, value: 1.5 }
