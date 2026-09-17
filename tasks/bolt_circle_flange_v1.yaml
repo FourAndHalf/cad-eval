@@ -1,0 +1,79 @@
+task_id: bolt_circle_flange_v1
+title: "Circular flange with bolt-circle hole pattern"
+description_template: >
+  Design a circular flange, outer diameter {{ outer_diameter }}mm,
+  thickness {{ thickness }}mm, with a central bore of diameter
+  {{ bore_diameter }}mm. Add {{ hole_count }} equally spaced
+  through-holes of diameter {{ hole_diameter }}mm +/-{{ hole_diameter_tol }}mm
+  on a {{ pcd }}mm pitch circle diameter, concentric with the bore.
+  Export as a single manifold solid STEP file. Units: millimeters.
+
+variables:
+  outer_diameter:    { type: float, default: 100.0, unit: mm }
+  thickness:         { type: float, default: 8.0, unit: mm }
+  bore_diameter:     { type: float, default: 30.0, unit: mm }
+  hole_count:        { type: int, default: 4 }
+  hole_diameter:     { type: float, default: 6.4, unit: mm }
+  hole_diameter_tol: { type: float, default: 0.1, unit: mm }
+  pcd:               { type: float, default: 50.0, unit: mm }
+
+assertions:
+  - id: is_manifold_solid
+    type: manifold_solid
+    description: "Exactly one closed, manifold, watertight solid body"
+    params:
+      min_solid_count: 1
+      max_solid_count: 1
+
+  - id: bore
+    type: hole_pattern
+    description: "Central through-bore"
+    params:
+      expected_count: 1
+      diameter_nominal: "{{ bore_diameter }}"
+      diameter_tol: 0.1
+      through: true
+
+  - id: bolt_circle
+    type: hole_pattern
+    description: "{{ hole_count }} holes on a {{ pcd }}mm PCD, evenly spaced"
+    params:
+      expected_count: "{{ hole_count }}"
+      diameter_nominal: "{{ hole_diameter }}"
+      diameter_tol: "{{ hole_diameter_tol }}"
+      through: true
+      pcd:
+        diameter: "{{ pcd }}"
+        diameter_tol: 0.15
+        even_spacing: true
+        angle_tol_deg: 1.0
+
+  - id: overall_od
+    type: bounding_box
+    description: "Overall envelope matches outer diameter and thickness"
+    params:
+      expected:
+        x: "{{ outer_diameter }}"
+        y: "{{ outer_diameter }}"
+        z: "{{ thickness }}"
+      tolerance: 0.3
+
+  - id: volume_check
+    type: volume
+    description: "Solid volume within 1.5% of analytically expected volume"
+    params:
+      expected: "{{ 3.14159265 * ((outer_diameter / 2) ** 2 - (bore_diameter / 2) ** 2) * thickness - hole_count * 3.14159265 * (hole_diameter / 2) ** 2 * thickness }}"
+      tolerance_pct: 1.5
+
+parametric:
+  perturbable:
+    - variable: hole_count
+      deltas:
+        - { op: set, value: 6 }
+        - { op: set, value: 3 }
+    - variable: pcd
+      deltas:
+        - { op: scale, factor: 1.2 }
+    - variable: outer_diameter
+      deltas:
+        - { op: scale, factor: 1.15 }

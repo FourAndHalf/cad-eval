@@ -32,8 +32,11 @@ class ManifoldSolidParams(BaseModel):
     allow_open_shells: bool = False
 
 
+Expr = Union[str, int, float]
+
+
 class PCDBlock(BaseModel):
-    diameter: str
+    diameter: Expr
     diameter_tol: float
     center: list[float] | None = None
     even_spacing: bool = True
@@ -41,9 +44,9 @@ class PCDBlock(BaseModel):
 
 
 class HolePatternParams(BaseModel):
-    expected_count: str
-    diameter_nominal: str
-    diameter_tol: str
+    expected_count: Expr
+    diameter_nominal: Expr
+    diameter_tol: Expr
     through: bool = True
     axis: list[float] | None = None
     axis_tol_deg: float = 2.0
@@ -53,36 +56,36 @@ class HolePatternParams(BaseModel):
 
 
 class BoundingBoxParams(BaseModel):
-    expected: dict[str, str]  # keys: x, y, z -> Jinja2 expression strings
+    expected: dict[str, Expr]  # keys: x, y, z -> Jinja2 expression strings or literals
     tolerance: float
 
 
 class VolumeParams(BaseModel):
-    expected: str
+    expected: Expr
     tolerance_pct: float
 
 
 class MinWallThicknessParams(BaseModel):
-    min_thickness: str
+    min_thickness: Expr
     sample_count: int = 2000
     region: str | None = None
 
 
 class KeywaySlotParams(BaseModel):
-    width: str
+    width: Expr
     width_tol: float
-    depth: str
+    depth: Expr
     depth_tol: float
-    length: str
+    length: Expr
     length_tol: float
-    shaft_diameter: str
-    position_along_axis_from_end: str
+    shaft_diameter: Expr
+    position_along_axis_from_end: Expr
     position_tol: float = 0.5
 
 
 class FeatureCountParams(BaseModel):
     feature_type: Literal["hole", "fillet", "slot"]
-    expected_count: str
+    expected_count: Expr
 
 
 class AssertionBase(BaseModel):
