@@ -39,7 +39,7 @@ def run_python_script(script_path: Path, workdir: Path) -> SandboxResult:
     start = time.monotonic()
     try:
         proc = subprocess.run(
-            [sys.executable, str(script_path)],
+            [sys.executable, str(Path(script_path).resolve())],
             cwd=str(workdir),
             timeout=_TIMEOUT_SEC,
             capture_output=True,

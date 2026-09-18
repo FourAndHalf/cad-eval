@@ -12,7 +12,13 @@ from google import genai
 from google.genai import types
 
 from cad_eval.agents.base import AgentResult
-from cad_eval.agents.prompts import DEFAULT_MODEL, MAX_TOKENS, SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
+from cad_eval.agents.prompts import (
+    DEFAULT_MODEL,
+    MAX_TOKENS,
+    RETRY_PROMPT_TEMPLATE,
+    SYSTEM_PROMPT,
+    USER_PROMPT_TEMPLATE,
+)
 from cad_eval.agents.sandbox import run_python_script
 
 _CODE_BLOCK_RE = re.compile(r"```(?:python)?\s*\n(.*?)```", re.DOTALL)
@@ -32,10 +38,14 @@ class ReferenceLLMAgent:
         self.model_id = model_id
         self._client = genai.Client()  # resolves GOOGLE_API_KEY / GEMINI_API_KEY from the environment
 
-    def _generate_code(self, spec_text: str) -> tuple[str | None, str]:
+    def _generate_code(self, spec_text: str, feedback: str | None = None) -> tuple[str | None, str]:
+        if feedback:
+            prompt = RETRY_PROMPT_TEMPLATE.format(spec_text=spec_text, feedback=feedback)
+        else:
+            prompt = USER_PROMPT_TEMPLATE.format(spec_text=spec_text)
         response = self._client.models.generate_content(
             model=self.model_id,
-            contents=USER_PROMPT_TEMPLATE.format(spec_text=spec_text),
+            contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 max_output_tokens=MAX_TOKENS,
@@ -47,13 +57,13 @@ class ReferenceLLMAgent:
             return None, text
         return match.group(1), text
 
-    def run(self, spec_text: str, workdir: Path) -> AgentResult:
-        workdir = Path(workdir)
+    def run(self, spec_text: str, workdir: Path, feedback: str | None = None) -> AgentResult:
+        workdir = Path(workdir).resolve()
         workdir.mkdir(parents=True, exist_ok=True)
         step_path = workdir / "part.step"
 
         try:
-            code, raw_response = self._generate_code(spec_text)
+            code, raw_response = self._generate_code(spec_text, feedback=feedback)
         except Exception as exc:  # noqa: BLE001 - any API failure is an llm_error, not a crash
             return AgentResult(status="llm_error", message=str(exc))
 
