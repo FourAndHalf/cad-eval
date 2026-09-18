@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import click
@@ -106,6 +107,83 @@ def check(task_path, step_path):
     result = evaluate(resolved, step_path)
     click.echo(result.model_dump_json(indent=2))
     raise SystemExit(0 if result.overall_status == "pass" else 1)
+
+
+@main.command()
+@click.argument("requirements")
+@click.option("--task-id", default=None, help="task_id / YAML filename stem (default: derived from requirements)")
+@click.option("--max-attempts", default=3, show_default=True, help="Max CAD-generation retries on checker failure")
+@click.option("--tasks-dir", default="tasks", type=click.Path(), help="Directory to write the task YAML into")
+@click.option("--out", "out_dir", default=None, help="Run output directory (default: runs/<timestamp>_<task_id>)")
+def design(requirements, task_id, max_attempts, tasks_dir, out_dir):
+    """End-to-end: turn free-text design requirements into a task YAML, generate
+    a STEP file for it, check it against the checker, and retry with feedback
+    to the agent if it fails."""
+    import datetime
+
+    from cad_eval.agents.reference_llm_agent import ReferenceLLMAgent
+    from cad_eval.agents.task_designer import TaskDesignError, TaskDesignerAgent
+    from cad_eval.checker.evaluate import evaluate
+    from cad_eval.task.resolve import resolve_task
+
+    task_id = task_id or re.sub(r"[^a-z0-9]+", "_", requirements.lower()).strip("_")[:40] or "custom_part"
+
+    click.echo(f"designing task '{task_id}' from requirements...")
+    try:
+        task, yaml_text = TaskDesignerAgent().design(requirements, task_id)
+    except TaskDesignError as exc:
+        click.echo(f"failed to design task: {exc}")
+        raise SystemExit(1)
+
+    tasks_dir_path = Path(tasks_dir)
+    tasks_dir_path.mkdir(parents=True, exist_ok=True)
+    task_path = tasks_dir_path / f"{task.task_id}.yaml"
+    task_path.write_text(yaml_text)
+    click.echo(f"wrote {task_path}")
+
+    resolved = resolve_task(task)
+    click.echo(resolved.spec_text.strip())
+    click.echo()
+
+    out_dir = Path(out_dir or f"runs/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{task.task_id}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    agent = ReferenceLLMAgent()
+    feedback = None
+
+    for attempt in range(1, max_attempts + 1):
+        workdir = out_dir / f"attempt_{attempt}"
+        click.echo(f"attempt {attempt}/{max_attempts}: generating CadQuery code...")
+        agent_result = agent.run(resolved.spec_text, workdir, feedback=feedback)
+
+        if agent_result.status != "ok":
+            reason = agent_result.message or agent_result.stderr_tail or agent_result.status
+            click.echo(f"  agent failed ({agent_result.status}): {reason}")
+            feedback = f"The code failed to run (status={agent_result.status}): {reason}"
+            continue
+
+        result = evaluate(resolved, agent_result.step_path)
+        click.echo(f"  checker: {result.overall_status}")
+        for a in result.assertions:
+            mark = "PASS" if a.status == "pass" else a.status.upper()
+            click.echo(f"    [{mark}] {a.id}: {a.message}".rstrip())
+
+        if result.overall_status == "pass":
+            click.echo(f"\nSUCCESS on attempt {attempt}/{max_attempts}")
+            click.echo(f"task: {task_path}")
+            click.echo(f"step: {agent_result.step_path}")
+            raise SystemExit(0)
+
+        failing = [a for a in result.assertions if a.status != "pass"]
+        feedback = "The generated part failed these checks:\n" + "\n".join(
+            f"- {a.id} ({a.type}): expected {a.expected}, got {a.actual}. {a.message}".rstrip()
+            for a in failing
+        )
+
+    click.echo(f"\nFAILED after {max_attempts} attempts")
+    click.echo(f"task: {task_path}")
+    click.echo(f"last checker result under: {out_dir}")
+    raise SystemExit(1)
 
 
 if __name__ == "__main__":

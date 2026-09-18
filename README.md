@@ -59,6 +59,10 @@ cad-eval run --all
 # Compare two runs (e.g. before/after a prompt change) and see exactly
 # which tasks regressed, improved, or held.
 cad-eval report diff runs/<run_a>/results.json runs/<run_b>/results.json
+
+# End-to-end: turn free-text design requirements into a task YAML, generate
+# a STEP file for it, check it, and retry with checker feedback on failure.
+cad-eval design "L-bracket, 80x60mm legs, 5mm thick, 2x M6 clearance holes"
 ```
 
 ## Layout
